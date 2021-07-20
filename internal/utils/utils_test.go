@@ -67,24 +67,24 @@ func sliceEqual(a, b []int) bool {
 }
 
 func TestFilterSlice(t *testing.T) {
-	res := FilterIntSlice([]int{1, 2, 3}, 4, 5, 6)
-	if len(res) != 3 {
-		t.Errorf("expected %v, got %v", []int{}, res)
-	}
-	if !sliceEqual(res, []int{1, 2, 3}) {
-		t.Errorf("expected %v, got %v", []int{}, res)
-	}
-
-	res = FilterIntSlice([]int{1, 2, 3}, 3, 5, 2)
-	if len(res) != 1 {
-		t.Errorf("expected %v, got %v", []int{}, res)
-	}
-	if !sliceEqual(res, []int{1}) {
-		t.Errorf("expected %v, got %v", []int{}, res)
-	}
-
-	res = FilterIntSlice([]int{1, 2, 3}, 3, 1, 2)
+	res := FilterIntSlice([]int{1, 2, 3})
 	if len(res) != 0 {
 		t.Errorf("expected %v, got %v", []int{}, res)
+	}
+
+	res = FilterIntSlice([]int{1, 4, 3})
+	if len(res) != 1 {
+		t.Errorf("expected %v, got %v", []int{4}, res)
+	}
+	if !sliceEqual(res, []int{4}) {
+		t.Errorf("expected %v, got %v", []int{4}, res)
+	}
+
+	res = FilterIntSlice([]int{7,6,11,10,50,32})
+	if len(res) != 3 {
+		t.Errorf("expected %v, got %v", []int{7,6,10}, res)
+	}
+	if !sliceEqual(res, []int{7,6,10}) {
+		t.Errorf("expected %v, got %v", []int{7,6,10}, res)
 	}
 }

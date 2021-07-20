@@ -37,17 +37,14 @@ func SwapIntMap(input map[int]int) (map[int]int, error) {
 	return res, nil
 }
 
-func FilterIntSlice(input []int, values ...int) []int {
+func FilterIntSlice(input []int) []int {
+	filterValues := map[int]struct{}{4:struct{}{}, 7:struct{}{}, 6:struct{}{}, 10:struct{}{}, 8:struct{}{}, 15:struct{}{}}
 	res := make([]int, 0, len(input))
 
-InputLoop:
 	for _, inputVal := range input {
-		for _, v := range values {
-			if inputVal == v {
-				continue InputLoop
-			}
+		if _, ok := filterValues[inputVal]; ok {
+			res = append(res, inputVal)
 		}
-		res = append(res, inputVal)
 	}
 
 	return res
