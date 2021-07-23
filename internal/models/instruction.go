@@ -19,7 +19,6 @@ func (instruction Instruction) String() string {
 	b.WriteString(strconv.FormatUint(instruction.Id, 10))
 	b.WriteString(": ")
 	fmt.Fprintf(&b, "\"%s\"", instruction.Text)
-	//b.WriteString(instruction.Text)
 
 	return b.String()
 }
