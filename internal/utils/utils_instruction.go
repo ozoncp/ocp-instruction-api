@@ -11,17 +11,27 @@ func BatchInstructionSlice(input []models.Instruction, chankSize int) ([][]model
 	}
 
 	inputSize := len(input)
-	if inputSize < 1 {
-		return nil, errors.New("incorrect input slice size")
+
+	if inputSize == 0 {
+		return [][]models.Instruction{}, nil
 	}
 
-	res := make([][]models.Instruction, int(inputSize/chankSize)+1)
+	resLen := inputSize / chankSize
+	if (inputSize % chankSize) > 0 {
+		resLen++
+	}
+
+	res := make([][]models.Instruction, resLen)
+
 	var i, j int
-	for ; i < inputSize-chankSize; i += chankSize {
+	for ; i <= inputSize-chankSize; i += chankSize {
 		res[j] = input[i : i+chankSize]
 		j++
 	}
-	res[j] = input[i:inputSize]
+
+	if i < inputSize {
+		res[j] = input[i:inputSize]
+	}
 
 	return res, nil
 }

@@ -1,31 +1,37 @@
 package ocp_instruction_api
 
 import (
-	"fmt"
+	"io/ioutil"
 	"os"
 )
 
-func FileOpenClose() {
-	checkConfig := func(fname string) error {
-		file, err := os.Open(fname)
+type chkConfFunc func(confText string) error
+
+func FileOpenClose(checkConfig chkConfFunc, fname ...string) (retErr error) {
+	for _, confFile := range fname {
+		file, err := os.Open(confFile)
 		if err != nil {
 			return err
 		}
 
-		defer file.Close()
+		defer func(f *os.File) {
+			err := f.Close()
+			if err != nil && retErr == nil{
+				retErr = err
+			}
+		}(file)
 
-		// some code
-
-		return nil
-	}
-
-	files := [...]string{"./config.conf", "/config.conf", "/var/lib/configsStore/config.cfg"}
-
-	for _, confFile := range files {
-		err := checkConfig(confFile)
+		b, err := ioutil.ReadAll(file)
 		if err != nil {
-			fmt.Println("check config error:", err)
+			return err
+		}
+
+		err = checkConfig(string(b))
+		if err != nil {
+			return err
 		}
 	}
+
+	return retErr
 }
 

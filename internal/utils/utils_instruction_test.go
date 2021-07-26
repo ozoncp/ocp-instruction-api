@@ -3,50 +3,62 @@ package utils
 import (
 	"github.com/ozoncp/ocp-instruction-api/internal/models"
 	"github.com/stretchr/testify/assert"
+	"math/rand"
 	"testing"
 )
 
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randString(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
+func generateInstructionSlice(count int) []models.Instruction {
+	ret := make([]models.Instruction, 0, count)
+	for i := 0; i < count; i++ {
+		ret = append(ret, models.Instruction{Id: rand.Uint64(), ClassroomId: rand.Uint64(), PrevId:rand.Uint64(), Text: randString(rand.Intn(64))})
+	}
+
+	return ret
+}
+
+
+
 func TestBatchInstructionSlice(t *testing.T) {
-	_, err := BatchInstructionSlice(make([]models.Instruction, 0), 10)
+	_, err := BatchInstructionSlice(make([]models.Instruction, 10), 0)
 	assert.NotNil(t, err)
 
-	_, err = BatchInstructionSlice(make([]models.Instruction, 10), 0)
-	assert.NotNil(t, err)
-
-	sl := []models.Instruction{
-		{Id: 1, ClassroomId: 15, Text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.", PrevId: 0},
-		{Id: 2, ClassroomId: 14, Text: "Maecenas imperdiet risus lectus, id ultrices odio gravida vitae.", PrevId: 0},
-		{Id: 3, ClassroomId: 15, Text: "Aenean non orci eget lectus placerat porta non eu ligula.", PrevId: 0},
-		{Id: 4, ClassroomId: 13, Text: "Ut sollicitudin malesuada mauris non pretium.", PrevId: 0},
-		{Id: 5, ClassroomId: 1, Text: "Ut varius ligula metus, a volutpat leo porttitor et.", PrevId: 0},
-		{Id: 6, ClassroomId: 5, Text: "Quisque ut porta libero.", PrevId: 0},
-		{Id: 7, ClassroomId: 15, Text: "Curabitur sodales, nunc bibendum maximus faucibus, lectus erat fringilla nulla, quis tempor arcu magna ", PrevId: 0},
-		{Id: 8, ClassroomId: 65, Text: "vel diam.", PrevId: 0},
-		{Id: 9, ClassroomId: 2, Text: "Vestibulum posuere elit turpis, nec blandit ipsum sollicitudin imperdiet.", PrevId: 0},
-		{Id: 10, ClassroomId: 6, Text: "Nam et consectetur enim.", PrevId: 0},
-		{Id: 11, ClassroomId: 9, Text: "Mauris at rutrum enim.", PrevId: 0},
-	}
-
-	ret, err := BatchInstructionSlice(sl, 7)
+	ret, err := BatchInstructionSlice(make([]models.Instruction, 0), 10)
 	assert.Nil(t, err)
+	assert.Equal(t, ret, make([][]models.Instruction, 0))
 
-	exptd := [][]models.Instruction{
-		{
-			{Id: 1, ClassroomId: 15, Text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.", PrevId: 0},
-			{Id: 2, ClassroomId: 14, Text: "Maecenas imperdiet risus lectus, id ultrices odio gravida vitae.", PrevId: 0},
-			{Id: 3, ClassroomId: 15, Text: "Aenean non orci eget lectus placerat porta non eu ligula.", PrevId: 0},
-			{Id: 4, ClassroomId: 13, Text: "Ut sollicitudin malesuada mauris non pretium.", PrevId: 0},
-			{Id: 5, ClassroomId: 1, Text: "Ut varius ligula metus, a volutpat leo porttitor et.", PrevId: 0},
-			{Id: 6, ClassroomId: 5, Text: "Quisque ut porta libero.", PrevId: 0},
-			{Id: 7, ClassroomId: 15, Text: "Curabitur sodales, nunc bibendum maximus faucibus, lectus erat fringilla nulla, quis tempor arcu magna ", PrevId: 0},
-		}, {
-			{Id: 8, ClassroomId: 65, Text: "vel diam.", PrevId: 0},
-			{Id: 9, ClassroomId: 2, Text: "Vestibulum posuere elit turpis, nec blandit ipsum sollicitudin imperdiet.", PrevId: 0},
-			{Id: 10, ClassroomId: 6, Text: "Nam et consectetur enim.", PrevId: 0},
-			{Id: 11, ClassroomId: 9, Text: "Mauris at rutrum enim.", PrevId: 0},
-		},
-	}
 
+	sl_1 := generateInstructionSlice(1)
+	ret, err = BatchInstructionSlice(sl_1, 10)
+	assert.Nil(t, err)
+	assert.Equal(t, ret, [][]models.Instruction{sl_1})
+
+	sl_2 := generateInstructionSlice(2)
+	ret, err = BatchInstructionSlice(sl_2, 3)
+	assert.Nil(t, err)
+	assert.Equal(t, ret, [][]models.Instruction{sl_2})
+
+	sl_3 := generateInstructionSlice(3)
+	ret, err = BatchInstructionSlice(sl_3, 3)
+	assert.Nil(t, err)
+	assert.Equal(t, ret, [][]models.Instruction{sl_3})
+
+	sl1 := generateInstructionSlice(3)
+	sl2 := generateInstructionSlice(1)
+	sl := append(sl1, sl2...)
+	exptd := [][]models.Instruction{sl1, sl2}
+
+	ret, err = BatchInstructionSlice(sl, 3)
+	assert.Nil(t, err)
 	assert.Equal(t, exptd, ret)
 }
 
