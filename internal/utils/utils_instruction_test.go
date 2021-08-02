@@ -3,30 +3,8 @@ package utils
 import (
 	"github.com/ozoncp/ocp-instruction-api/internal/models"
 	"github.com/stretchr/testify/assert"
-	"math/rand"
 	"testing"
 )
-
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func randString(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-	return string(b)
-}
-
-func generateInstructionSlice(count int) []models.Instruction {
-	ret := make([]models.Instruction, 0, count)
-	for i := 0; i < count; i++ {
-		ret = append(ret, models.Instruction{Id: rand.Uint64(), ClassroomId: rand.Uint64(), PrevId:rand.Uint64(), Text: randString(rand.Intn(64))})
-	}
-
-	return ret
-}
-
-
 
 func TestBatchInstructionSlice(t *testing.T) {
 	_, err := BatchInstructionSlice(make([]models.Instruction, 10), 0)
@@ -37,23 +15,23 @@ func TestBatchInstructionSlice(t *testing.T) {
 	assert.Equal(t, ret, make([][]models.Instruction, 0))
 
 
-	sl_1 := generateInstructionSlice(1)
+	sl_1 := GenerateInstructionSlice(1)
 	ret, err = BatchInstructionSlice(sl_1, 10)
 	assert.Nil(t, err)
 	assert.Equal(t, ret, [][]models.Instruction{sl_1})
 
-	sl_2 := generateInstructionSlice(2)
+	sl_2 := GenerateInstructionSlice(2)
 	ret, err = BatchInstructionSlice(sl_2, 3)
 	assert.Nil(t, err)
 	assert.Equal(t, ret, [][]models.Instruction{sl_2})
 
-	sl_3 := generateInstructionSlice(3)
+	sl_3 := GenerateInstructionSlice(3)
 	ret, err = BatchInstructionSlice(sl_3, 3)
 	assert.Nil(t, err)
 	assert.Equal(t, ret, [][]models.Instruction{sl_3})
 
-	sl1 := generateInstructionSlice(3)
-	sl2 := generateInstructionSlice(1)
+	sl1 := GenerateInstructionSlice(3)
+	sl2 := GenerateInstructionSlice(1)
 	sl := append(sl1, sl2...)
 	exptd := [][]models.Instruction{sl1, sl2}
 
