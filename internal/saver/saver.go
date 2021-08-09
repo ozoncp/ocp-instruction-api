@@ -2,6 +2,7 @@ package saver
 
 import (
 	"context"
+	"errors"
 	"github.com/ozoncp/ocp-instruction-api/internal/flusher"
 	"github.com/ozoncp/ocp-instruction-api/internal/models"
 	"log"
@@ -10,7 +11,7 @@ import (
 )
 
 type Saver interface {
-	Save(entity models.Instruction)
+	Save(entity models.Instruction) error
 	Close()
 }
 
@@ -36,7 +37,10 @@ type saver struct {
 	storage     []models.Instruction
 	mu          sync.Mutex
 	beforeClose context.CancelFunc
+	closed      bool
 }
+
+var ErrClosed = errors.New("saver is closed")
 
 func (s *saver) dump() {
 	s.mu.Lock()
@@ -63,6 +67,7 @@ func (s *saver) ticker(ctx context.Context, duration time.Duration) {
 		case <-tm.C:
 			s.dump()
 		case <-ctx.Done():
+			s.closed = true
 			tm.Stop()
 			s.dump()
 			return
@@ -70,11 +75,17 @@ func (s *saver) ticker(ctx context.Context, duration time.Duration) {
 	}
 }
 
-func (s *saver) Save(entity models.Instruction) {
+func (s *saver) Save(entity models.Instruction) error {
+	if s.closed {
+		return ErrClosed
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.storage = append(s.storage, entity)
+
+	return nil
 }
 
 func (s *saver) Close() {
