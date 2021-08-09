@@ -29,8 +29,10 @@ func TestSaver_Save(t *testing.T) {
 	s.Save(data[0])
 	time.Sleep(750 * time.Millisecond)
 
+	data = utils.GenerateInstructionSlice(1)
+	s.Save(data[0])
 	s.Close()
-	time.Sleep(750 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 }
 
 func TestSaver_SaveError(t *testing.T) {
