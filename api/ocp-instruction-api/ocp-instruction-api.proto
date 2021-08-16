@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+import "github.com/envoyproxy/protoc-gen-validate/validate/validate.proto";
+
+package ozoncp.ocp_instruction_api;
+
+option go_package = "github.com/ozoncp/ocp-instruction-api/pkg/ocp-instruction-api;ocp_instruction_api";
+
+service OcpInstruction {
+  rpc CreateV1(CreateV1Request) returns(CreateV1Response) {
+    option (google.api.http) = {
+      post: "/v1/create"
+    };
+  }
+
+  rpc DescribeV1(DescribeV1Request) returns(DescribeV1Response) {
+    option (google.api.http) = {
+      get: "/v1/describe/{Id}"
+    };
+  }
+
+  rpc ListV1(ListV1Request) returns(ListV1Response) {
+    option (google.api.http) = {
+      get: "/v1/list"
+    };
+  }
+
+  rpc RemoveV1(RemoveV1Request) returns(RemoveV1Response) {
+    option (google.api.http) = {
+      post: "/v1/remove"
+    };
+  }
+}
+
+
+message Instruction {
+  uint64 Id = 1;
+  uint64 ClassroomId = 2;
+  string Text = 3;
+  uint64 PrevId = 4;
+}
+
+
+message CreateV1Request{
+  uint64 PrevId = 2;
+  uint64 ClassroomId = 3;
+  string Text = 4;
+}
+
+message CreateV1Response{
+  uint64 Id = 1;
+}
+
+message DescribeV1Request{
+  uint64 Id = 1 [(validate.rules).uint64.gt = 0];
+}
+
+message DescribeV1Response{
+  Instruction Instruction = 1;
+}
+
+message ListV1Request{
+  uint64 limit = 1;
+  uint64 offset = 2;
+}
+
+message ListV1Response{
+  repeated Instruction Instruction = 1;
+}
+
+message RemoveV1Request{
+  uint64 Id = 1 [(validate.rules).uint64.gt = 0];
+}
+
+message RemoveV1Response{
+}
+
+
