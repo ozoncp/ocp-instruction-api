@@ -16,7 +16,7 @@ func FileOpenClose(checkConfig chkConfFunc, fname ...string) (retErr error) {
 
 		defer func(f *os.File) {
 			err := f.Close()
-			if err != nil && retErr == nil{
+			if err != nil && retErr == nil {
 				retErr = err
 			}
 		}(file)
@@ -34,4 +34,3 @@ func FileOpenClose(checkConfig chkConfFunc, fname ...string) (retErr error) {
 
 	return retErr
 }
-
