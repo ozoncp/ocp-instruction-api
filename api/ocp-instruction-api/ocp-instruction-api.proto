@@ -11,6 +11,7 @@ service OcpInstruction {
   rpc CreateV1(CreateV1Request) returns(CreateV1Response) {
     option (google.api.http) = {
       post: "/v1/create"
+      body: "*"
     };
   }
 
@@ -28,7 +29,8 @@ service OcpInstruction {
 
   rpc RemoveV1(RemoveV1Request) returns(RemoveV1Response) {
     option (google.api.http) = {
-      post: "/v1/remove"
+      post: "/v1/remove/{Id}"
+      body: "*"
     };
   }
 }

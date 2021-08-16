@@ -18,7 +18,8 @@ test:
 	go test -v ./...
 
 .PHONY: build
-build: .vendor-proto .generate .build
+#build: .vendor-proto .generate .build
+build: .build
 
 .PHONY: gen
 gen: .generate
@@ -80,7 +81,7 @@ install-go-deps: .install-go-deps
 
 .PHONY: .install-go-deps
 .install-go-deps:
-		ls go.mod || go mod init
+		go mod tidy
 		go get -u github.com/envoyproxy/protoc-gen-validate
 		go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 		go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc

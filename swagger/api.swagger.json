@@ -28,13 +28,23 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ocp_instruction_apiCreateV1Request"
+            }
+          }
+        ],
         "tags": [
           "OcpInstruction"
         ]
       }
     },
-    "/v1/describe": {
-      "post": {
+    "/v1/describe/{Id}": {
+      "get": {
         "operationId": "OcpInstruction_DescribeV1",
         "responses": {
           "200": {
@@ -50,6 +60,15 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "Id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uint64"
+          }
+        ],
         "tags": [
           "OcpInstruction"
         ]
@@ -93,7 +112,7 @@
         ]
       }
     },
-    "/v1/remove": {
+    "/v1/remove/{Id}": {
       "post": {
         "operationId": "OcpInstruction_RemoveV1",
         "responses": {
@@ -110,6 +129,23 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "Id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ocp_instruction_apiRemoveV1Request"
+            }
+          }
+        ],
         "tags": [
           "OcpInstruction"
         ]
@@ -117,6 +153,22 @@
     }
   },
   "definitions": {
+    "ocp_instruction_apiCreateV1Request": {
+      "type": "object",
+      "properties": {
+        "PrevId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "ClassroomId": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "Text": {
+          "type": "string"
+        }
+      }
+    },
     "ocp_instruction_apiCreateV1Response": {
       "type": "object",
       "properties": {
@@ -162,6 +214,15 @@
           "items": {
             "$ref": "#/definitions/ocp_instruction_apiInstruction"
           }
+        }
+      }
+    },
+    "ocp_instruction_apiRemoveV1Request": {
+      "type": "object",
+      "properties": {
+        "Id": {
+          "type": "string",
+          "format": "uint64"
         }
       }
     },
