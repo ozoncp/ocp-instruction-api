@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"github.com/ozoncp/ocp-instruction-api/pkg/db"
 	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"google.golang.org/grpc"
@@ -22,13 +24,19 @@ const (
 )
 
 func run() error {
+	connString := os.Getenv("PG_CONN_STR")
+	if connString == "" {
+		log.Fatal("Env PG_CONN_STR is not set")
+	}
+	dbConn := db.Connect(connString)
+
 	listen, err := net.Listen("tcp", grpcPort)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
-	desc.RegisterOcpInstructionServer(s, api.NewOcpInstructionApi())
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(db.NewInterceptorWithDB(dbConn)))
+	desc.RegisterOcpInstructionServer(s, api.BuildOcpInstructionApi())
 
 	if err := s.Serve(listen); err != nil {
 		log.Fatalf("failed to serve: %v", err)

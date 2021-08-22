@@ -18,7 +18,6 @@ test:
 	go test -v ./...
 
 .PHONY: build
-#build: .vendor-proto .generate .build
 build: .build
 
 .PHONY: gen
@@ -91,3 +90,10 @@ install-go-deps: .install-go-deps
 		go install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 		go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
 		go install github.com/golang/protobuf/protoc-gen-go
+
+.PHONY: goose
+goose:
+		cd ./migrations
+		goose up
+		cd ..
+

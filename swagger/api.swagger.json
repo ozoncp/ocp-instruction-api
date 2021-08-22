@@ -156,27 +156,13 @@
     "ocp_instruction_apiCreateV1Request": {
       "type": "object",
       "properties": {
-        "PrevId": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "ClassroomId": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "Text": {
-          "type": "string"
+        "Instruction": {
+          "$ref": "#/definitions/ocp_instruction_apiInstruction"
         }
       }
     },
     "ocp_instruction_apiCreateV1Response": {
-      "type": "object",
-      "properties": {
-        "Id": {
-          "type": "string",
-          "format": "uint64"
-        }
-      }
+      "type": "object"
     },
     "ocp_instruction_apiDescribeV1Response": {
       "type": "object",

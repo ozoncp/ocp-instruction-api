@@ -114,11 +114,15 @@ func (m *CreateV1Request) Validate() error {
 		return nil
 	}
 
-	// no validation rules for PrevId
-
-	// no validation rules for ClassroomId
-
-	// no validation rules for Text
+	if v, ok := interface{}(m.GetInstruction()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return CreateV1RequestValidationError{
+				field:  "Instruction",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
 
 	return nil
 }
@@ -184,8 +188,6 @@ func (m *CreateV1Response) Validate() error {
 	if m == nil {
 		return nil
 	}
-
-	// no validation rules for Id
 
 	return nil
 }

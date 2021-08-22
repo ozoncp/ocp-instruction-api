@@ -45,13 +45,10 @@ message Instruction {
 
 
 message CreateV1Request{
-  uint64 PrevId = 2;
-  uint64 ClassroomId = 3;
-  string Text = 4;
+  Instruction Instruction = 1;
 }
 
 message CreateV1Response{
-  uint64 Id = 1;
 }
 
 message DescribeV1Request{
