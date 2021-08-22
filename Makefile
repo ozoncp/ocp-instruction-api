@@ -81,15 +81,15 @@ install-go-deps: .install-go-deps
 .PHONY: .install-go-deps
 .install-go-deps:
 		go mod tidy
-		go get -u github.com/envoyproxy/protoc-gen-validate
-		go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
-		go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
-		go get -u github.com/golang/protobuf/proto
-		go install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
-		go install github.com/envoyproxy/protoc-gen-validate
-		go install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
-		go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
-		go install github.com/golang/protobuf/protoc-gen-go
+		go get -u github.com/envoyproxy/protoc-gen-validate@v0.6.1
+		go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@v2.5.0
+		go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0
+		go get -u github.com/golang/protobuf/proto@v1.5.2
+		go install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@v2.5.0
+		go install github.com/envoyproxy/protoc-gen-validate@v0.6.1
+		go install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@v2.5.0
+		go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0
+		go install github.com/golang/protobuf/protoc-gen-go@v1.5.2
 
 .PHONY: goose
 goose:

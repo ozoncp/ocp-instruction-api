@@ -37,10 +37,10 @@ service OcpInstruction {
 
 
 message Instruction {
-  uint64 Id = 1;
-  uint64 ClassroomId = 2;
-  string Text = 3;
-  uint64 PrevId = 4;
+  uint64 Id = 1 [(validate.rules).uint64.gt = 0];
+  uint64 ClassroomId = 2 [(validate.rules).uint64.gte = 0];
+  string Text = 3 [(validate.rules).string.min_len = 0];
+  uint64 PrevId = 4 [(validate.rules).uint64.gte = 0];
 }
 
 
@@ -60,8 +60,8 @@ message DescribeV1Response{
 }
 
 message ListV1Request{
-  uint64 limit = 1;
-  uint64 offset = 2;
+  uint64 limit = 1 [(validate.rules).uint64.gte = 0];
+  uint64 offset = 2 [(validate.rules).uint64.gte = 0];
 }
 
 message ListV1Response{

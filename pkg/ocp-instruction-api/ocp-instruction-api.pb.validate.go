@@ -41,13 +41,33 @@ func (m *Instruction) Validate() error {
 		return nil
 	}
 
-	// no validation rules for Id
+	if m.GetId() <= 0 {
+		return InstructionValidationError{
+			field:  "Id",
+			reason: "value must be greater than 0",
+		}
+	}
 
-	// no validation rules for ClassroomId
+	if m.GetClassroomId() < 0 {
+		return InstructionValidationError{
+			field:  "ClassroomId",
+			reason: "value must be greater than or equal to 0",
+		}
+	}
 
-	// no validation rules for Text
+	if utf8.RuneCountInString(m.GetText()) < 0 {
+		return InstructionValidationError{
+			field:  "Text",
+			reason: "value length must be at least 0 runes",
+		}
+	}
 
-	// no validation rules for PrevId
+	if m.GetPrevId() < 0 {
+		return InstructionValidationError{
+			field:  "PrevId",
+			reason: "value must be greater than or equal to 0",
+		}
+	}
 
 	return nil
 }
@@ -405,9 +425,19 @@ func (m *ListV1Request) Validate() error {
 		return nil
 	}
 
-	// no validation rules for Limit
+	if m.GetLimit() < 0 {
+		return ListV1RequestValidationError{
+			field:  "Limit",
+			reason: "value must be greater than or equal to 0",
+		}
+	}
 
-	// no validation rules for Offset
+	if m.GetOffset() < 0 {
+		return ListV1RequestValidationError{
+			field:  "Offset",
+			reason: "value must be greater than or equal to 0",
+		}
+	}
 
 	return nil
 }
