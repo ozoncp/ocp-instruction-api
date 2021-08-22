@@ -1,0 +1,29 @@
+version: '3.3'
+
+services:
+
+  db:
+    image: postgres:13-alpine3.14
+    restart: always
+    volumes:
+      - ~/pg_ocp-instruction-api:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - 5432:5432
+
+  app:
+    image: app
+    depends_on:
+      - db
+    build:
+      context: .
+    environment:
+      PG_CONN_STR: postgres://postgres:postgres@db:5432/instruction?sslmode=disable
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: postgres://postgres:postgres@db:5432/instruction?sslmode=disable
+    restart: always
+    ports:
+      - 80:80
+      - 8081:8081

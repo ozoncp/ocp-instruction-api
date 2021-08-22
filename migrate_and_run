@@ -1,0 +1,6 @@
+#!/bin/sh
+
+./goose up
+
+./ocp-instruction-api
+

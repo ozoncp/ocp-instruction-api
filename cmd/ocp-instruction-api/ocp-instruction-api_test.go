@@ -22,7 +22,6 @@ func TestFileOpenClose(t *testing.T) {
 	}
 	f.Close()
 
-
 	err = FileOpenClose(doneFunc, "not_exist.cfg")
 	assert.NotNil(t, err)
 
