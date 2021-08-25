@@ -15,6 +15,13 @@ service OcpInstruction {
     };
   }
 
+  rpc CreateMultiV1(CreateMultiV1Request) returns(CreateMultiV1Response) {
+    option (google.api.http) = {
+      post: "/v1/create-multi"
+      body: "*"
+    };
+  }
+
   rpc DescribeV1(DescribeV1Request) returns(DescribeV1Response) {
     option (google.api.http) = {
       get: "/v1/describe/{Id}"
@@ -30,6 +37,13 @@ service OcpInstruction {
   rpc RemoveV1(RemoveV1Request) returns(RemoveV1Response) {
     option (google.api.http) = {
       post: "/v1/remove/{Id}"
+      body: "*"
+    };
+  }
+
+  rpc UpdateV1(UpdateV1Request) returns(UpdateV1Response) {
+    option (google.api.http) = {
+      post: "/v1/update/{Id}"
       body: "*"
     };
   }
@@ -49,6 +63,13 @@ message CreateV1Request{
 }
 
 message CreateV1Response{
+}
+
+message CreateMultiV1Request{
+  repeated Instruction Instruction = 1;
+}
+
+message CreateMultiV1Response{
 }
 
 message DescribeV1Request{
@@ -75,4 +96,11 @@ message RemoveV1Request{
 message RemoveV1Response{
 }
 
+message UpdateV1Request{
+  uint64 Id = 1 [(validate.rules).uint64.gt = 0];
+  Instruction Instruction = 2;
+}
+
+message UpdateV1Response{
+}
 

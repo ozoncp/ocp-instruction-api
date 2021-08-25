@@ -2,21 +2,26 @@ package ocp_instruction_api
 
 import (
 	"context"
+	"github.com/opentracing/opentracing-go"
+	"github.com/ozoncp/ocp-instruction-api/internal/metrics"
 	"github.com/ozoncp/ocp-instruction-api/internal/models"
-	"github.com/ozoncp/ocp-instruction-api/internal/repo"
 	desc "github.com/ozoncp/ocp-instruction-api/pkg/ocp-instruction-api"
 	"github.com/rs/zerolog/log"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (api *OcpInstructionApi) CreateV1(ctx context.Context, req *desc.CreateV1Request) (*desc.CreateV1Response, error) {
-	//return nil, status.Errorf (codes.Unimplemented, "method CreateV1 not implemented")
 	log.Debug().Msg("CreateV1")
+
+	span, _ := opentracing.StartSpanFromContext(ctx, "CreateV1")
+	defer span.Finish()
+
+	metrics.OpsCounter_Inc("create")
 
 	if err := req.Validate(); err != nil {
 		return &desc.CreateV1Response{}, err
 	}
+
+	log.Debug().Msg("CreateV1 validated")
 
 	instr := req.GetInstruction()
 	entities := []models.Instruction{{
@@ -26,16 +31,53 @@ func (api *OcpInstructionApi) CreateV1(ctx context.Context, req *desc.CreateV1Re
 		PrevId:      instr.GetPrevId(),
 	}}
 
-	if err := api.srv.Add(ctx, entities); err != nil {
+	log.Debug().Msgf("ents: %v", entities)
+
+	err := api.producer.CreateMultiV1(ctx, entities)
+	if err != nil {
 		return &desc.CreateV1Response{}, err
 	}
 
 	return &desc.CreateV1Response{}, nil
 }
 
+func (api *OcpInstructionApi) CreateMultiV1(ctx context.Context, req *desc.CreateMultiV1Request) (*desc.CreateMultiV1Response, error) {
+	log.Debug().Msg("CreateMultiV1")
+
+	span, _ := opentracing.StartSpanFromContext(ctx, "CreateMultiV1")
+	defer span.Finish()
+
+	metrics.OpsCounter_Inc("create_multi")
+
+	if err := req.Validate(); err != nil {
+		return &desc.CreateMultiV1Response{}, err
+	}
+
+	var entities []models.Instruction
+	for _, instr := range req.GetInstruction() {
+		entities = append(entities, models.Instruction{
+			Id:          instr.GetId(),
+			Text:        instr.GetText(),
+			ClassroomId: instr.GetClassroomId(),
+			PrevId:      instr.GetPrevId(),
+		})
+	}
+
+	err := api.producer.CreateMultiV1(ctx, entities)
+	if err != nil {
+		return &desc.CreateMultiV1Response{}, err
+	}
+
+	return &desc.CreateMultiV1Response{}, nil
+}
+
 func (api *OcpInstructionApi) DescribeV1(ctx context.Context, req *desc.DescribeV1Request) (*desc.DescribeV1Response, error) {
-	//return nil, status.Errorf(codes.Unimplemented, "method DescribeV1 not implemented")
 	log.Debug().Msg("DescribeV1")
+
+	span, _ := opentracing.StartSpanFromContext(ctx, "DescribeV1")
+	defer span.Finish()
+
+	metrics.OpsCounter_Inc("describe")
 
 	if err := req.Validate(); err != nil {
 		return &desc.DescribeV1Response{}, err
@@ -57,8 +99,12 @@ func (api *OcpInstructionApi) DescribeV1(ctx context.Context, req *desc.Describe
 }
 
 func (api *OcpInstructionApi) ListV1(ctx context.Context, req *desc.ListV1Request) (*desc.ListV1Response, error) {
-	//return nil, status.Errorf(codes.Unimplemented, "method ListV1 not implemented")
 	log.Debug().Msg("ListV1")
+
+	span, _ := opentracing.StartSpanFromContext(ctx, "ListV1")
+	defer span.Finish()
+
+	metrics.OpsCounter_Inc("list")
 
 	if err := req.Validate(); err != nil {
 		return &desc.ListV1Response{}, err
@@ -89,23 +135,50 @@ func (api *OcpInstructionApi) ListV1(ctx context.Context, req *desc.ListV1Reques
 }
 
 func (api *OcpInstructionApi) RemoveV1(ctx context.Context, req *desc.RemoveV1Request) (*desc.RemoveV1Response, error) {
-	//return nil, status.Errorf(codes.Unimplemented, "method RemoveV1 not implemented")
 	log.Debug().Msg("RemoveV1")
+
+	span, _ := opentracing.StartSpanFromContext(ctx, "RemoveV1")
+	defer span.Finish()
+
+	metrics.OpsCounter_Inc("remove")
 
 	if err := req.Validate(); err != nil {
 		return &desc.RemoveV1Response{}, err
 	}
 
-	err := api.srv.Remove(ctx, req.GetId())
+	err := api.producer.RemoveV1(ctx, req.GetId())
 	if err != nil {
-		if err == repo.ErrNotFound {
-			log.Info().Err(err).Msg("id not found")
-			return &desc.RemoveV1Response{}, status.Error(codes.NotFound, "id not found")
-		}
-
-		log.Error().Err(err).Msg("Remove error")
-		return &desc.RemoveV1Response{}, status.Error(codes.Internal, "internal error")
+		return &desc.RemoveV1Response{}, err
 	}
 
 	return &desc.RemoveV1Response{}, nil
+}
+
+func (api *OcpInstructionApi) UpdateV1(ctx context.Context, req *desc.UpdateV1Request) (*desc.UpdateV1Response, error) {
+	log.Debug().Msg("UpdateV1")
+
+	span, _ := opentracing.StartSpanFromContext(ctx, "UpdateV1")
+	defer span.Finish()
+
+	metrics.OpsCounter_Inc("update")
+
+	if err := req.Validate(); err != nil {
+		return &desc.UpdateV1Response{}, err
+	}
+
+	entity := req.GetInstruction()
+
+	instr := models.Instruction{
+		Id:          entity.GetId(),
+		Text:        entity.GetText(),
+		ClassroomId: entity.GetClassroomId(),
+		PrevId:      entity.GetPrevId(),
+	}
+
+	err := api.producer.UpdateV1(ctx, instr)
+	if err != nil {
+		return &desc.UpdateV1Response{}, err
+	}
+
+	return &desc.UpdateV1Response{}, nil
 }

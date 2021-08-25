@@ -11,6 +11,7 @@ type IRepoService interface {
 	List(ctx context.Context, limit, offset uint64) ([]models.Instruction, error)
 	Describe(ctx context.Context, id uint64) (*models.Instruction, error)
 	Remove(ctx context.Context, id uint64) error
+	Update(ctx context.Context, entity models.Instruction) error
 }
 
 type RepoService struct {
@@ -28,6 +29,9 @@ func (r *RepoService) Describe(ctx context.Context, id uint64) (*models.Instruct
 }
 func (r *RepoService) Remove(ctx context.Context, id uint64) error {
 	return r.r.Remove(ctx, id)
+}
+func (r *RepoService) Update(ctx context.Context, entity models.Instruction) error {
+	return r.r.Update(ctx, entity)
 }
 
 func BuildRequestService() IRepoService {

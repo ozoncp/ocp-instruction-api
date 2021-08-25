@@ -1,6 +1,29 @@
 version: '3.3'
 
 services:
+  zoo1:
+    image: confluentinc/cp-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      zk_id: "1"
+      ZOOKEEPER_CLIENT_PORT: 32181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
+
+  kaf1:
+    image: confluentinc/cp-kafka
+    depends_on:
+      - zoo1
+    ports:
+      - "127.0.0.1:9094:9094"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: "zoo1:32181"
+      KAFKA_LISTENERS: INTERNAL://kaf1:9092,OUTSIDE://kaf1:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kaf1:9092,OUTSIDE://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
   db:
     image: postgres:13-alpine3.14
@@ -13,16 +36,34 @@ services:
     ports:
       - 5432:5432
 
+  prometheus:
+    image: prom/prometheus
+    restart: unless-stopped
+    user: root
+    ports:
+      - "9090:9090"
+    volumes:
+      - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "6831:6831/udp"
+      - "16686:16686"
+
   app:
     image: app
     depends_on:
       - db
+      - kaf1
     build:
       context: .
     environment:
       PG_CONN_STR: postgres://postgres:postgres@db:5432/instruction?sslmode=disable
       GOOSE_DRIVER: postgres
       GOOSE_DBSTRING: postgres://postgres:postgres@db:5432/instruction?sslmode=disable
+      KAFKA_ADDR: 127.0.0.1:9094
+      JAEGER_ADDR: jaeger:6831
     restart: always
     ports:
       - 80:80
