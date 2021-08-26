@@ -9,6 +9,7 @@ const (
 )
 
 type KafkaMessage struct {
+	TraceId     string
 	MessageType KafkaMessageType
 	Id          uint64
 	Instruction []Instruction

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Shopify/sarama"
+	"github.com/opentracing/opentracing-go"
 	"github.com/ozoncp/ocp-instruction-api/internal/models"
 	"github.com/ozoncp/ocp-instruction-api/internal/repoService"
 	"github.com/rs/zerolog/log"
@@ -37,6 +38,17 @@ func messageReceived(ctx context.Context, message *sarama.ConsumerMessage) {
 	if err != nil {
 		fmt.Printf("Error unmarshalling message: %s\n", err)
 	}
+
+	m := make(map[string]string)
+	m["uber-trace-id"] = msg.TraceId
+	carrier := opentracing.TextMapCarrier(m)
+	spanCtx, err := opentracing.GlobalTracer().Extract(
+		opentracing.TextMap,
+		carrier,
+	)
+
+	span := opentracing.GlobalTracer().StartSpan("kafka received message", opentracing.ChildOf(spanCtx))
+	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	r := ctx.Value("Repo").(*repoService.RepoService)
 

@@ -39,7 +39,20 @@ func BuildService(brokers []string, chunkSize int) (*Service, error) {
 	}, nil
 }
 
-func prepareMessage(topic string, message models.KafkaMessage) (*sarama.ProducerMessage, error) {
+func prepareMessage(ctx context.Context, topic string, message models.KafkaMessage) (*sarama.ProducerMessage, error) {
+	span := opentracing.SpanFromContext(ctx)
+	m := make(map[string]string)
+	carrier := opentracing.TextMapCarrier(m)
+	err := opentracing.GlobalTracer().Inject(
+		span.Context(),
+		opentracing.TextMap,
+		carrier,
+	)
+	if err != nil {
+		return nil, err
+	}
+	message.TraceId = m["uber-trace-id"]
+
 	b, err := json.Marshal(message)
 	if err != nil {
 		return nil, err
@@ -75,7 +88,7 @@ func (s *Service) CreateMultiV1(ctx context.Context, instructions []models.Instr
 			Instruction: chunk,
 		}
 
-		msg, err := prepareMessage("InstructionCUD", kfmsg)
+		msg, err := prepareMessage(ctx, "InstructionCUD", kfmsg)
 		if err != nil {
 			return err
 		}
@@ -89,13 +102,13 @@ func (s *Service) CreateMultiV1(ctx context.Context, instructions []models.Instr
 	return nil
 }
 
-func (s *Service) UpdateV1(context context.Context, instruction models.Instruction) error {
+func (s *Service) UpdateV1(ctx context.Context, instruction models.Instruction) error {
 	kfmsg := models.KafkaMessage{
 		MessageType: models.KafkaMessageType_Update,
 		Instruction: []models.Instruction{instruction},
 	}
 
-	msg, err := prepareMessage("InstructionCUD", kfmsg)
+	msg, err := prepareMessage(ctx, "InstructionCUD", kfmsg)
 	if err != nil {
 		return err
 	}
@@ -108,13 +121,13 @@ func (s *Service) UpdateV1(context context.Context, instruction models.Instructi
 	return nil
 }
 
-func (s *Service) RemoveV1(context context.Context, id uint64) error {
+func (s *Service) RemoveV1(ctx context.Context, id uint64) error {
 	kfmsg := models.KafkaMessage{
 		MessageType: models.KafkaMessageType_Delete,
 		Id:          id,
 	}
 
-	msg, err := prepareMessage("InstructionCUD", kfmsg)
+	msg, err := prepareMessage(ctx, "InstructionCUD", kfmsg)
 	if err != nil {
 		return err
 	}
