@@ -1,5 +1,5 @@
 FROM golang:1.16.7-alpine3.14 AS build
-RUN apk add --update make gcc libc-dev
+RUN apk add --update make gcc libc-dev git
 ENV PATH $PATH:/go/bin
 WORKDIR /go/src
 COPY . .

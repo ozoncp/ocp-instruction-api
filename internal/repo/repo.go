@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	sq "github.com/Masterminds/squirrel"
+	"github.com/opentracing/opentracing-go"
 	"github.com/ozoncp/ocp-instruction-api/internal/models"
 	"github.com/ozoncp/ocp-instruction-api/pkg/db"
 )
@@ -14,6 +15,7 @@ type Repo interface {
 	List(ctx context.Context, limit, offset uint64) ([]models.Instruction, error)
 	Describe(ctx context.Context, id uint64) (*models.Instruction, error)
 	Remove(ctx context.Context, id uint64) error
+	Update(ctx context.Context, entity models.Instruction) error
 }
 
 func NewRepo() Repo {
@@ -31,6 +33,9 @@ var (
 type repo struct{}
 
 func (r *repo) Add(ctx context.Context, entities []models.Instruction) error {
+	span, _ := opentracing.StartSpanFromContext(ctx, "repo Add")
+	defer span.Finish()
+
 	query := sq.Insert(tablename).
 		Columns("instruction_id", "classroom_id", "text", "prev_id").
 		PlaceholderFormat(sq.Dollar).
@@ -46,6 +51,9 @@ func (r *repo) Add(ctx context.Context, entities []models.Instruction) error {
 }
 
 func (r *repo) List(ctx context.Context, limit, offset uint64) ([]models.Instruction, error) {
+	span, _ := opentracing.StartSpanFromContext(ctx, "repo List")
+	defer span.Finish()
+
 	query := sq.Select("instruction_id", "text", "prev_id", "classroom_id").
 		From(tablename).
 		OrderBy("id").
@@ -83,6 +91,9 @@ func (r *repo) List(ctx context.Context, limit, offset uint64) ([]models.Instruc
 }
 
 func (r *repo) Describe(ctx context.Context, id uint64) (*models.Instruction, error) {
+	span, _ := opentracing.StartSpanFromContext(ctx, "repo Describe")
+	defer span.Finish()
+
 	query := sq.Select("instruction_id", "text", "prev_id", "classroom_id").
 		From(tablename).
 		Where(sq.Eq{"instruction_id": id}).
@@ -97,10 +108,42 @@ func (r *repo) Describe(ctx context.Context, id uint64) (*models.Instruction, er
 }
 
 func (r *repo) Remove(ctx context.Context, id uint64) error {
+	span, _ := opentracing.StartSpanFromContext(ctx, "repo Remove")
+	defer span.Finish()
+
 	res, err := sq.Delete(tablename).
 		Where(sq.Eq{"instruction_id": id}).
 		RunWith(db.GetDB(ctx)).
 		PlaceholderFormat(sq.Dollar).
+		ExecContext(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	cnt, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if cnt < 1 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
+func (r *repo) Update(ctx context.Context, entity models.Instruction) error {
+	span, _ := opentracing.StartSpanFromContext(ctx, "repo Update")
+	defer span.Finish()
+
+	res, err := sq.Update(tablename).
+		Where(sq.Eq{"instruction_id": entity.Id}).
+		RunWith(db.GetDB(ctx)).
+		PlaceholderFormat(sq.Dollar).
+		Set("text", entity.Text).
+		Set("prev_id", entity.PrevId).
+		Set("classroom_id", entity.ClassroomId).
 		ExecContext(ctx)
 
 	if err != nil {
