@@ -13,5 +13,6 @@ COPY --from=build /go/bin/goose ./
 COPY --from=build /go/src/migrations ./
 COPY --from=build /go/src/bin/ocp-instruction-api ./
 COPY --from=build /go/src/migrate_and_run ./
+COPY --from=build /go/src/config.yml ./
 
 CMD ["./migrate_and_run"]

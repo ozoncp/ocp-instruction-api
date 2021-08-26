@@ -59,11 +59,8 @@ services:
     build:
       context: .
     environment:
-      PG_CONN_STR: postgres://postgres:postgres@db:5432/instruction?sslmode=disable
       GOOSE_DRIVER: postgres
       GOOSE_DBSTRING: postgres://postgres:postgres@db:5432/instruction?sslmode=disable
-      KAFKA_ADDR: 127.0.0.1:9094
-      JAEGER_ADDR: jaeger:6831
     restart: always
     ports:
       - 80:80
