@@ -56,6 +56,8 @@ services:
     depends_on:
       - db
       - kaf1
+      - jaeger
+      - prometheus
     build:
       context: .
     environment:
