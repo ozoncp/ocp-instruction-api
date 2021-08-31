@@ -1,4 +1,5 @@
-pg_conn: postgres://postgres:postgres@localhost:5432/instruction?sslmode=disable
+pg_master_conn: postgres://postgres:postgres@localhost:5432/instruction?sslmode=disable
+pg_slave_conn: postgres://postgres:postgres@localhost:5433/instruction?sslmode=disable
 kafka_addr:
   - localhost:9094
 jaeger_addr: localhost:6831

@@ -6,7 +6,8 @@ import (
 )
 
 type Config struct {
-	Pg_conn            string   `yaml:"pg_conn"`
+	Pg_master_conn            string   `yaml:"pg_master_conn"`
+	Pg_slave_conn            string   `yaml:"pg_slave_conn"`
 	Kafka_addr         []string `yaml:"kafka_addr"`
 	Jaeger_addr        string   `yaml:"jaeger_addr"`
 	Inserts_chank_size int      `yaml:"inserts_chank_size"`

@@ -179,10 +179,11 @@ func main() {
 		log.Fatal().Err(err)
 	}
 
-	dbConn := db.Connect(cfg.Data.Pg_conn)
+	dbMasterConn := db.Connect(cfg.Data.Pg_master_conn)
+	dbSlaveConn := db.Connect(cfg.Data.Pg_slave_conn)
 
 	log.Debug().Msg("run consumer")
-	runConsumerService(ctx, wg, dbConn, cfg.Data.Kafka_addr)
+	runConsumerService(ctx, wg, dbMasterConn, cfg.Data.Kafka_addr)
 
 	log.Debug().Msg("run metrics")
 	metrics.Run(ctx, wg)
@@ -194,7 +195,7 @@ func main() {
 	runJSON(ctx, wg)
 
 	log.Debug().Msg("run app")
-	runGrpc(ctx, wg, dbConn, cfg.Data.Kafka_addr)
+	runGrpc(ctx, wg, dbSlaveConn, cfg.Data.Kafka_addr)
 
 	go func() {
 		termChan := make(chan os.Signal)
@@ -205,7 +206,10 @@ func main() {
 
 	wg.Wait()
 
-	if err := dbConn.Close(); err != nil {
-		log.Fatal().Err(err)
+	if err := dbSlaveConn.Close(); err != nil {
+		log.Error().Err(err)
+	}
+	if err := dbMasterConn.Close(); err != nil {
+		log.Error().Err(err)
 	}
 }
