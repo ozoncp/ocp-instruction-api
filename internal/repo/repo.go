@@ -57,6 +57,7 @@ func (r *repo) List(ctx context.Context, limit, offset uint64) ([]models.Instruc
 	query := sq.Select("instruction_id", "text", "prev_id", "classroom_id").
 		From(tablename).
 		OrderBy("id").
+		Where(sq.Eq{"deleted": false}).
 		RunWith(db.GetDB(ctx)).
 		PlaceholderFormat(sq.Dollar)
 
@@ -97,6 +98,7 @@ func (r *repo) Describe(ctx context.Context, id uint64) (*models.Instruction, er
 	query := sq.Select("instruction_id", "text", "prev_id", "classroom_id").
 		From(tablename).
 		Where(sq.Eq{"instruction_id": id}).
+		Where(sq.Eq{"deleted": false}).
 		RunWith(db.GetDB(ctx)).
 		PlaceholderFormat(sq.Dollar)
 
@@ -111,10 +113,11 @@ func (r *repo) Remove(ctx context.Context, id uint64) error {
 	span, _ := opentracing.StartSpanFromContext(ctx, "repo Remove")
 	defer span.Finish()
 
-	res, err := sq.Delete(tablename).
+	res, err := sq.Update(tablename).
 		Where(sq.Eq{"instruction_id": id}).
 		RunWith(db.GetDB(ctx)).
 		PlaceholderFormat(sq.Dollar).
+		Set("deleted", true).
 		ExecContext(ctx)
 
 	if err != nil {
@@ -139,6 +142,7 @@ func (r *repo) Update(ctx context.Context, entity models.Instruction) error {
 
 	res, err := sq.Update(tablename).
 		Where(sq.Eq{"instruction_id": entity.Id}).
+		Where(sq.Eq{"deleted": false}).
 		RunWith(db.GetDB(ctx)).
 		PlaceholderFormat(sq.Dollar).
 		Set("text", entity.Text).

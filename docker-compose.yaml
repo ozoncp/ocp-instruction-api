@@ -25,17 +25,6 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
-  db:
-    image: postgres:13-alpine3.14
-    restart: always
-    volumes:
-      - ~/pg_ocp-instruction-api:/var/lib/postgresql/data
-    environment:
-      POSTGRES_PASSWORD: postgres
-      PGDATA: /var/lib/postgresql/data/pgdata
-    ports:
-      - 5432:5432
-
   prometheus:
     image: prom/prometheus
     restart: unless-stopped
@@ -53,18 +42,60 @@ services:
 
   app:
     image: app
-    depends_on:
-      - db
-      - kaf1
     build:
       context: .
+      dockerfile: ./docker/app/Dockerfile
+    depends_on:
+      - pg_master
+      - pg_slave
+      - kaf1
+      - jaeger
+      - prometheus
     environment:
-      PG_CONN_STR: postgres://postgres:postgres@db:5432/instruction?sslmode=disable
       GOOSE_DRIVER: postgres
-      GOOSE_DBSTRING: postgres://postgres:postgres@db:5432/instruction?sslmode=disable
-      KAFKA_ADDR: 127.0.0.1:9094
-      JAEGER_ADDR: jaeger:6831
+      GOOSE_DBSTRING: postgres://postgres:postgres@pg_master:5432/instruction?sslmode=disable
     restart: always
     ports:
       - 80:80
       - 8081:8081
+
+  pg_master:
+    build:
+      context: .
+      dockerfile: ./docker/pg_master/Dockerfile
+    volumes:
+      - pg_data_ms:/var/lib/postgresql/data
+      - pg_wal_arch:/mnt/wal_arch
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - PG_REP_USER=replica
+      - PG_REP_PASSWORD=supper_replica_passwd_123
+    restart: always
+    ports:
+      - "5432:5432"
+
+  pg_slave:
+    depends_on:
+      - pg_master
+    build:
+      context: .
+      dockerfile: ./docker/pg_slave/Dockerfile
+    volumes:
+      - pg_data_sl:/var/lib/postgresql/data
+      - pg_wal_arch:/mnt/wal_arch
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - PG_REP_USER=replica
+      - PG_REP_PASSWORD=supper_replica_passwd_123
+    restart: always
+    ports:
+      - "5433:5432"
+
+volumes:
+  pg_data_ms:
+  pg_data_sl:
+  pg_wal_arch:

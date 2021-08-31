@@ -1,0 +1,10 @@
+pg_master_conn: postgres://postgres:postgres@localhost:5432/instruction?sslmode=disable
+pg_slave_conn: postgres://postgres:postgres@localhost:5433/instruction?sslmode=disable
+kafka_addr:
+  - localhost:9094
+jaeger_addr: localhost:6831
+inserts_chank_size: 3
+grpc_listen: ":8080"
+grpc_endpoint: localhost:8080
+grpc_jsongw_listen: ":8081"
+metrics_listen: ":9100"

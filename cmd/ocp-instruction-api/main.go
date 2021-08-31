@@ -3,19 +3,20 @@ package main
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"github.com/opentracing/opentracing-go"
+	cfg "github.com/ozoncp/ocp-instruction-api/internal/config"
 	"github.com/ozoncp/ocp-instruction-api/internal/consumer"
 	"github.com/ozoncp/ocp-instruction-api/internal/metrics"
 	"github.com/ozoncp/ocp-instruction-api/internal/producer"
 	"github.com/ozoncp/ocp-instruction-api/internal/repoService"
 	"github.com/ozoncp/ocp-instruction-api/pkg/db"
 	"github.com/uber/jaeger-client-go"
-	"log"
 	"net"
 	"net/http"
 	"os"
-	"strconv"
+	"os/signal"
+	"sync"
+	"syscall"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"google.golang.org/grpc"
@@ -23,9 +24,8 @@ import (
 	api "github.com/ozoncp/ocp-instruction-api/internal/app/ocp-instruction-api"
 	desc "github.com/ozoncp/ocp-instruction-api/pkg/ocp-instruction-api"
 
-	zerolog "github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/log"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	jaegercfg "github.com/uber/jaeger-client-go/config"
 	jaegerlog "github.com/uber/jaeger-client-go/log"
 	jaegermetrics "github.com/uber/jaeger-lib/metrics"
@@ -33,48 +33,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 )
 
-const (
-	grpcPort           = ":8080"
-	grpcServerEndpoint = "localhost:8080"
-	jsonGwListen       = ":8081"
-	metricsListen      = ":9100"
-)
-
-func initDB() (*sql.DB, error) {
-	connString := os.Getenv("PG_CONN_STR")
-	if connString == "" {
-		return nil, errors.New("Env PG_CONN_STR is not set")
-	}
-
-	dbConn := db.Connect(connString)
-
-	return dbConn, nil
-}
-
-func kafkaAddr() ([]string, error) {
-	kafkaAddr := os.Getenv("KAFKA_ADDR")
-	if kafkaAddr == "" {
-		return nil, errors.New("Env KAFKA_ADDR is not set")
-	}
-
-	addrs := make([]string, 1)
-	addrs = append(addrs, kafkaAddr)
-
-	return addrs, nil
-}
-
-func runMetrics() {
-	metrics.Register()
-
-	http.Handle("/metrics", promhttp.Handler())
-
-	err := http.ListenAndServe(metricsListen, nil)
-	if err != nil {
-		log.Fatalf("failed to serve metrics: %v", err)
-	}
-}
-
-func runTracing(addr string) {
+func runTracing(ctx context.Context) {
 	config := jaegercfg.Configuration{
 		ServiceName: "ocp_instruction_api",
 		Sampler: &jaegercfg.SamplerConfig{
@@ -83,30 +42,39 @@ func runTracing(addr string) {
 		},
 		Reporter: &jaegercfg.ReporterConfig{
 			LogSpans:           true,
-			LocalAgentHostPort: addr,
+			LocalAgentHostPort: cfg.Data.Jaeger_addr,
 		},
 	}
 
 	logger := jaegerlog.StdLogger
 	metricsFactory := jaegermetrics.NullFactory
 
-	tracer, _, err := config.NewTracer(
+	tracer, closer, err := config.NewTracer(
 		jaegercfg.Logger(logger),
 		jaegercfg.Metrics(metricsFactory),
 	)
 
 	if err != nil {
-		log.Fatalf("trace init failed: %v", err)
+		log.Fatal().Msgf("trace init failed: %v", err)
 	}
 
 	opentracing.SetGlobalTracer(tracer)
-	//_ = closer.Close()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+			log.Debug().Msg("shutdown tracer")
+			if err := closer.Close(); err != nil {
+				log.Error().Msgf("failed to close tracer: %v", err)
+			}
+		}
+	}()
 }
 
-func run(dbConn *sql.DB, kafkaAddrs []string) error {
-	listen, err := net.Listen("tcp", grpcPort)
+func runGrpc(ctx context.Context, wg *sync.WaitGroup, dbConn *sql.DB, kafkaAddrs []string) {
+	listen, err := net.Listen("tcp", cfg.Data.Grpc_Listen)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatal().Msgf("failed to listen: %v", err)
 	}
 
 	tracer := opentracing.GlobalTracer()
@@ -115,46 +83,65 @@ func run(dbConn *sql.DB, kafkaAddrs []string) error {
 		grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(tracer)),
 	)
 
-	ch_s, err := strconv.Atoi(os.Getenv("CREATE_CHUNK_SIZE"))
-	if err != nil || ch_s == 0 {
-		ch_s = 3
-	}
-	kProd, err := producer.BuildService(kafkaAddrs, ch_s)
+	kProd, err := producer.BuildService(kafkaAddrs, cfg.Data.Inserts_chank_size)
 	if err != nil {
-		log.Fatalf("failed to connect to kafka: %v", err)
+		log.Fatal().Msgf("failed to connect to kafka: %v", err)
 	}
 
 	apiSrv := api.NewOcpInstructionApi(repoService.BuildRequestService(), kProd)
 	desc.RegisterOcpInstructionServer(s, apiSrv)
 
-	if err := s.Serve(listen); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
 
-	return nil
+		if err := s.Serve(listen); err != nil {
+			log.Fatal().Msgf("failed to serve gRPC: %v", err)
+		}
+	}()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+			log.Debug().Msg("shutdown gRPC")
+			s.GracefulStop()
+		}
+	}()
 }
 
-func runJSON() {
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
+func runJSON(ctx context.Context, wg *sync.WaitGroup) {
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
-	err := desc.RegisterOcpInstructionHandlerFromEndpoint(ctx, mux, grpcServerEndpoint, opts)
+	err := desc.RegisterOcpInstructionHandlerFromEndpoint(ctx, mux, cfg.Data.Grpc_Endpoint, opts)
 	if err != nil {
-		log.Fatalf("failed json registration haldler: %v", err)
+		log.Fatal().Msgf("failed json registration haldler: %v", err)
 	}
 
-	err = http.ListenAndServe(jsonGwListen, mux)
-	if err != nil {
-		log.Fatalf("failed to serve json: %v", err)
-	}
+	s := http.Server{Addr: cfg.Data.Grpc_Jsongw_Listen, Handler: mux}
+
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Msgf("failed to serve json: %v", err)
+		}
+	}()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+			log.Debug().Msg("shutdown JSON gw")
+			err := s.Shutdown(ctx)
+			if err != nil && err != context.Canceled {
+				log.Error().Msgf("failed to shutdown json: %v", err)
+			}
+		}
+	}()
 }
 
-func runConsumerService(dbConn *sql.DB, kafkaAddrs []string) {
-	ctx := context.Background()
+func runConsumerService(ctx context.Context, wg *sync.WaitGroup, dbConn *sql.DB, kafkaAddrs []string) {
 	ctx = db.NewContext(ctx, dbConn)
 
 	tracer := opentracing.GlobalTracer()
@@ -162,42 +149,67 @@ func runConsumerService(dbConn *sql.DB, kafkaAddrs []string) {
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	serv := consumer.BuildService(kafkaAddrs, "InstructionCUDGroup", "InstructionCUD")
-	err := serv.StartConsuming(ctx)
-	if err != nil {
-		log.Fatalf("failed to start consuming: %v", err)
-	}
+
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+
+		if err := serv.Consuming(ctx); err != nil {
+			log.Fatal().Msgf("failed to start consuming: %v", err)
+		}
+	}()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+			log.Debug().Msg("shutdown consumer")
+			if err := serv.Close(); err != nil {
+				log.Error().Msgf("failed to shutdown consuming: %v", err)
+			}
+		}
+	}()
 }
 
 func main() {
-	conn, err := initDB()
-	if err != nil {
-		log.Fatal(err)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	wg := &sync.WaitGroup{}
+
+	if err := cfg.Load(); err != nil {
+		log.Fatal().Err(err)
 	}
 
-	kAddr, err := kafkaAddr()
-	if err != nil {
-		log.Fatal(err)
+	dbMasterConn := db.Connect(cfg.Data.Pg_master_conn)
+	dbSlaveConn := db.Connect(cfg.Data.Pg_slave_conn)
+
+	log.Debug().Msg("run consumer")
+	runConsumerService(ctx, wg, dbMasterConn, cfg.Data.Kafka_addr)
+
+	log.Debug().Msg("run metrics")
+	metrics.Run(ctx, wg)
+
+	log.Debug().Msg("run tracing")
+	runTracing(ctx)
+
+	log.Debug().Msg("run json")
+	runJSON(ctx, wg)
+
+	log.Debug().Msg("run app")
+	runGrpc(ctx, wg, dbSlaveConn, cfg.Data.Kafka_addr)
+
+	go func() {
+		termChan := make(chan os.Signal)
+		signal.Notify(termChan, syscall.SIGINT, syscall.SIGTERM)
+		<-termChan
+		cancel()
+	}()
+
+	wg.Wait()
+
+	if err := dbSlaveConn.Close(); err != nil {
+		log.Error().Err(err)
 	}
-
-	zerolog.Debug().Msg("run json")
-	go runJSON()
-
-	zerolog.Debug().Msg("run consumer")
-	runConsumerService(conn, kAddr)
-
-	zerolog.Debug().Msg("run metrics")
-	go runMetrics()
-
-	zerolog.Debug().Msg("run tracing")
-	jaegerAddr := os.Getenv("JAEGER_ADDR")
-	if jaegerAddr == "" {
-		log.Fatal(errors.New("Env JAEGER_ADDR is not set"))
-	}
-	runTracing(jaegerAddr)
-
-	zerolog.Debug().Msg("run app")
-
-	if err := run(conn, kAddr); err != nil {
-		log.Fatal(err)
+	if err := dbMasterConn.Close(); err != nil {
+		log.Error().Err(err)
 	}
 }

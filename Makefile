@@ -93,7 +93,5 @@ install-go-deps: .install-go-deps
 
 .PHONY: goose
 goose:
-		pushd ./migrations
-		goose up
-		popd
+		cd ./migrations; goose postgres postgres://postgres:postgres@localhost:5432/instruction?sslmode=disable up; cd ..
 
