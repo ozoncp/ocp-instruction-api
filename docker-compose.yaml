@@ -25,17 +25,6 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
-#  db:
-#    image: postgres:13-alpine3.14
-#    restart: always
-#    volumes:
-#      - ~/pg_ocp-instruction-api:/var/lib/postgresql/data
-#    environment:
-#      POSTGRES_PASSWORD: postgres
-#      PGDATA: /var/lib/postgresql/data/pgdata
-#    ports:
-#      - 5432:5432
-
   prometheus:
     image: prom/prometheus
     restart: unless-stopped
